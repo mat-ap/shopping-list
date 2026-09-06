@@ -176,9 +176,27 @@
     letter-spacing:0.2px;
   }
   .add-btn:active{ background:var(--purple); transform:scale(0.98); }
+  .add-btn:disabled{ background:var(--text-faint); cursor:default; transform:none; }
 
   .section{ padding:28px 22px 0; }
-  .section-title{
+  .section-title-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:12px;
+    padding-left:2px;
+  }
+  .section-title-row .section-title{ margin-bottom:0; }
+  .section-total{
+    font-size:12.5px;
+    color:var(--text-sub);
+    font-weight:600;
+  }
+  .section-total span{
+    color:var(--purple-deep);
+    font-weight:800;
+    font-size:13.5px;
+  }
     font-size:12px;
     font-weight:700;
     color:var(--text-faint);
@@ -220,8 +238,24 @@
   .item-card.checked .item-name{ text-decoration:line-through; color:var(--text-sub); }
   .item-qty{ font-size:12.5px; color:var(--text-faint); font-weight:600; flex-shrink:0; }
   .item-sub-row{ display:flex; align-items:center; gap:8px; margin-top:3px; flex-wrap:wrap; }
-  .item-price{ font-size:13.5px; color:var(--purple); font-weight:800; }
+  .item-price-col{
+    font-size:16px;
+    font-weight:800;
+    color:var(--purple-deep);
+    flex-shrink:0;
+    letter-spacing:-0.3px;
+    text-align:right;
+    min-width:56px;
+  }
+  .item-card.checked .item-price-col{ color:var(--text-sub); }
   .item-memo{ font-size:12px; color:var(--text-sub); }
+  .item-link{
+    font-size:12.5px;
+    color:var(--purple);
+    font-weight:700;
+    text-decoration:none;
+  }
+  .item-link:active{ opacity:0.6; }
   .item-author{
     display:inline-flex;
     align-items:center;
@@ -307,7 +341,10 @@
   </div>
 
   <div class="section" id="pendingSection">
-    <div class="section-title">담은 아이템</div>
+    <div class="section-title-row">
+      <div class="section-title">담은 아이템</div>
+      <div class="section-total">합계 <span id="pendingTotal">0원</span></div>
+    </div>
     <div class="item-list" id="pendingList"></div>
   </div>
 
@@ -375,6 +412,16 @@ for(let n = 1; n <= 99; n++){
 qtySelect.innerHTML = qtyOptionsHtml;
 qtySelect.value = '1';
 
+// 필수값 검증 (메모만 선택, 나머지는 필수)
+function validateForm(){
+  const nameOk = nameInput.value.trim().length > 0;
+  const priceOk = priceInput.value.replace(/[^0-9]/g, '').length > 0;
+  const authorOk = !!selectedPerson;
+  addBtn.disabled = !(nameOk && priceOk && authorOk);
+}
+addBtn.disabled = true;
+nameInput.addEventListener('input', validateForm);
+
 // 담당자 선택 (토글 가능)
 personRow.addEventListener('click', (e) => {
   const chip = e.target.closest('.person-chip');
@@ -387,12 +434,14 @@ personRow.addEventListener('click', (e) => {
   }else{
     selectedPerson = null;
   }
+  validateForm();
 });
 
 // 가격 입력 중 천단위 콤마 자동 포맷
 priceInput.addEventListener('input', () => {
   const digits = priceInput.value.replace(/[^0-9]/g, '');
   priceInput.value = digits ? Number(digits).toLocaleString() : '';
+  validateForm();
 });
 
 // 실시간 동기화: Firestore 리스너
@@ -413,6 +462,9 @@ function render(){
   document.getElementById('pctText').textContent = pct + '%';
   document.getElementById('barFill').style.width = pct + '%';
 
+  const pendingTotal = pending.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 1), 0);
+  document.getElementById('pendingTotal').textContent = pendingTotal.toLocaleString() + '원';
+
   emptyState.style.display = items.length === 0 ? 'block' : 'none';
   pendingSection.style.display = pending.length ? 'block' : 'none';
   doneSection.style.display = done.length ? 'block' : 'none';
@@ -427,8 +479,12 @@ function renderCard(item){
   const camBadge = item.image
     ? `<button class="cam-badge" data-action="photo" data-id="${item.id}">📷</button>`
     : `<span class="cam-badge">📷</span>`;
-  const priceHtml = item.price ? `<span class="item-price">${Number(item.price).toLocaleString()}원</span>` : '';
-  const memoHtml = item.memo ? `<span class="item-memo">${escapeHtml(item.memo)}</span>` : '';
+  const priceHtml = item.price ? Number(item.price).toLocaleString() + '원' : '';
+  const memoHtml = item.memo
+    ? (isUrl(item.memo)
+        ? `<a class="item-link" href="${toHref(item.memo)}" target="_blank" rel="noopener noreferrer">바로가기 →</a>`
+        : `<span class="item-memo">${escapeHtml(item.memo)}</span>`)
+    : '';
   const authorHtml = item.author
     ? `<span class="item-author ${item.author.toLowerCase()}">${escapeHtml(item.author)}</span>`
     : '';
@@ -445,10 +501,10 @@ function renderCard(item){
         </div>
         <div class="item-sub-row">
           ${authorHtml}
-          ${priceHtml}
           ${memoHtml}
         </div>
       </div>
+      <div class="item-price-col">${priceHtml}</div>
       <button class="check-btn ${item.checked ? 'on' : ''}" data-action="check" data-id="${item.id}">
         <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -477,6 +533,13 @@ function pickEmoji(name){
   return '🛍️';
 }
 
+function isUrl(str){
+  return /^(https?:\/\/|www\.)[^\s]+\.[^\s]+/i.test(str.trim());
+}
+function toHref(str){
+  const s = str.trim();
+  return s.startsWith('http') ? s : `https://${s}`;
+}
 function escapeHtml(str){
   const d = document.createElement('div');
   d.textContent = str || '';
@@ -485,10 +548,10 @@ function escapeHtml(str){
 
 async function addItem(){
   const name = nameInput.value.trim();
-  if(!name) return;
-  const qty = parseInt(qtySelect.value) || 1;
   const priceDigits = priceInput.value.replace(/[^0-9]/g, '');
-  const price = priceDigits ? parseInt(priceDigits) : null;
+  if(!name || !priceDigits || !selectedPerson) return;
+  const qty = parseInt(qtySelect.value) || 1;
+  const price = parseInt(priceDigits);
   const memo = memoInput.value.trim();
   const author = selectedPerson;
 
@@ -504,12 +567,14 @@ async function addItem(){
     qtySelect.value = '1';
     priceInput.value = '';
     memoInput.value = '';
+    selectedPerson = null;
+    personRow.querySelectorAll('.person-chip').forEach(c => c.classList.remove('active'));
     nameInput.focus();
   }catch(e){
     console.error('추가 실패', e);
     alert('추가에 실패했어요. 인터넷 연결을 확인해주세요.');
   }
-  addBtn.disabled = false;
+  validateForm();
 }
 
 function resizeImage(file){
