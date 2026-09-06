@@ -511,6 +511,77 @@
     min-width:0;
     cursor:pointer;
   }
+
+  .buyer-modal{
+    position:fixed; inset:0;
+    background:rgba(28,20,35,0.5);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:140;
+  }
+  .buyer-modal.open{ display:flex; }
+  .buyer-sheet{
+    background:var(--card);
+    width:100%;
+    max-width:440px;
+    border-radius:20px 20px 0 0;
+    padding:24px 20px 28px;
+    text-align:center;
+  }
+  .buyer-sheet-title{
+    font-size:16px;
+    font-weight:800;
+    color:var(--purple-deep);
+    margin-bottom:18px;
+  }
+  .buyer-btn-row{
+    display:flex;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .buyer-btn{
+    flex:1;
+    padding:20px 0;
+    border-radius:14px;
+    border:none;
+    font-size:17px;
+    font-weight:800;
+    font-family:inherit;
+    color:#fff;
+    cursor:pointer;
+  }
+  .buyer-btn.sj{ background:var(--purple); }
+  .buyer-btn.jw{ background:var(--gold); }
+  .buyer-btn:active{ opacity:0.85; }
+  .buyer-cancel-btn{
+    width:100%;
+    background:none;
+    border:none;
+    padding:12px 0;
+    font-size:14.5px;
+    font-weight:600;
+    color:var(--text-sub);
+    cursor:pointer;
+    font-family:inherit;
+  }
+
+  .item-buyer{
+    display:inline-block;
+    font-size:11px;
+    font-weight:700;
+    padding:2px 8px;
+    border-radius:100px;
+    border:1px solid currentColor;
+  }
+  .item-buyer.sj{ color:var(--purple); }
+  .item-buyer.jw{ color:#8A6A1E; }
+
+  .history-detail-buyer{
+    font-size:11px;
+    font-weight:700;
+    margin-left:8px;
+  }
 </style>
 </head>
 <body>
@@ -559,7 +630,7 @@
       <div class="add-label">메모 / 링크</div>
       <input type="text" class="add-input" id="memoInput" placeholder="메모나 구매 링크를 입력하세요" maxlength="120">
 
-      <div class="add-label">담당</div>
+      <div class="add-label">요청</div>
       <div class="person-row" id="personRow">
         <div class="person-chip" data-person="SJ">SJ</div>
         <div class="person-chip" data-person="JW">JW</div>
@@ -599,7 +670,7 @@
     <div class="add-label">메모 / 링크</div>
     <input type="text" class="add-input" id="editMemoInput" placeholder="메모나 구매 링크를 입력하세요" maxlength="120">
 
-    <div class="add-label">담당</div>
+    <div class="add-label">요청</div>
     <div class="person-row" id="editPersonRow">
       <div class="person-chip" data-person="SJ">SJ</div>
       <div class="person-chip" data-person="JW">JW</div>
@@ -609,6 +680,17 @@
       <button class="edit-cancel-btn" id="editCancelBtn">취소</button>
       <button class="add-btn" id="editSaveBtn">저장</button>
     </div>
+  </div>
+</div>
+
+<div class="buyer-modal" id="buyerModal">
+  <div class="buyer-sheet">
+    <div class="buyer-sheet-title">누가 구매했나요?</div>
+    <div class="buyer-btn-row">
+      <button class="buyer-btn sj" data-buyer="SJ">SJ</button>
+      <button class="buyer-btn jw" data-buyer="JW">JW</button>
+    </div>
+    <button class="buyer-cancel-btn" id="buyerCancelBtn">취소</button>
   </div>
 </div>
 
@@ -827,6 +909,9 @@ function renderCard(item){
     ? `<span class="item-author ${item.author.toLowerCase()}">${escapeHtml(item.author)}</span>`
     : '';
   const dateHtml = item.checked ? `<span class="item-date">${formatDate(item.purchasedAt)}</span>` : '';
+  const buyerHtml = (item.checked && item.buyer)
+    ? `<span class="item-buyer ${item.buyer.toLowerCase()}">${escapeHtml(item.buyer)} 구매</span>`
+    : '';
   const midAndPrice = `
       <div class="item-mid">
         <div class="item-top-row">
@@ -837,6 +922,7 @@ function renderCard(item){
           ${authorHtml}
           ${unitPriceHtml}
           ${memoHtml}
+          ${buyerHtml}
           ${dateHtml}
         </div>
       </div>
@@ -990,14 +1076,20 @@ document.addEventListener('click', async (e) => {
   if(!item) return;
 
   if(btn.dataset.action === 'check'){
-    const newChecked = !item.checked;
-    try{
-      await updateDoc(doc(db, "items", id), {
-        checked: newChecked,
-        purchasedAt: newChecked ? serverTimestamp() : null
-      });
+    if(item.checked){
+      // 체크 해제: 구매 정보 초기화
+      try{
+        await updateDoc(doc(db, "items", id), {
+          checked: false,
+          purchasedAt: null,
+          buyer: null
+        });
+      }
+      catch(e){ console.error('체크 해제 실패', e); }
+    }else{
+      // 체크: 구매자 선택 필요
+      openBuyerModal(id);
     }
-    catch(e){ console.error('체크 실패', e); }
   }else if(btn.dataset.action === 'del'){
     try{ await deleteDoc(doc(db, "items", id)); }
     catch(e){ console.error('삭제 실패', e); }
@@ -1099,6 +1191,41 @@ editSaveBtn.addEventListener('click', async () => {
 addBtn.addEventListener('click', addItem);
 nameInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addItem(); });
 
+// ---- 구매자 선택 모달 (체크 시) ----
+const buyerModal = document.getElementById('buyerModal');
+const buyerCancelBtn = document.getElementById('buyerCancelBtn');
+let pendingCheckId = null;
+
+function openBuyerModal(id){
+  pendingCheckId = id;
+  buyerModal.classList.add('open');
+}
+function closeBuyerModal(){
+  buyerModal.classList.remove('open');
+  pendingCheckId = null;
+}
+buyerCancelBtn.addEventListener('click', closeBuyerModal);
+buyerModal.addEventListener('click', (e) => {
+  if(e.target === buyerModal) closeBuyerModal();
+});
+buyerModal.querySelectorAll('.buyer-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if(!pendingCheckId) return;
+    const id = pendingCheckId;
+    const buyer = btn.dataset.buyer;
+    closeBuyerModal();
+    try{
+      await updateDoc(doc(db, "items", id), {
+        checked: true,
+        purchasedAt: serverTimestamp(),
+        buyer
+      });
+    }catch(e){
+      console.error('구매 완료 처리 실패', e);
+    }
+  });
+});
+
 // ---- 구매내역 화면 ----
 const historyBtn = document.getElementById('historyBtn');
 const refreshBtn = document.getElementById('refreshBtn');
@@ -1173,9 +1300,12 @@ function renderHistory(){
       ? `<div class="history-detail">${g.list.map(i => {
           const q = i.qty || 1;
           const unit = Number(i.price) || 0;
+          const buyerTag = i.buyer
+            ? `<span class="history-detail-buyer ${i.buyer.toLowerCase() === 'sj' ? 'item-buyer sj' : 'item-buyer jw'}">${escapeHtml(i.buyer)}</span>`
+            : '';
           return `
             <div class="history-detail-row">
-              <span class="history-detail-name">${escapeHtml(i.name)} ${q > 1 ? `×${q}` : ''}</span>
+              <span class="history-detail-name">${escapeHtml(i.name)} ${q > 1 ? `×${q}` : ''} ${buyerTag}</span>
               <span class="history-detail-price">${(unit * q).toLocaleString()}원</span>
             </div>
           `;
