@@ -879,6 +879,10 @@ function render(){
 
   pendingList.innerHTML = pending.map(renderCard).join('');
   doneList.innerHTML = done.map(renderCard).join('');
+
+  if(historyScreen.classList.contains('open')){
+    renderHistory();
+  }
 }
 
 function formatDate(ts){
