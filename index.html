@@ -34,38 +34,38 @@
     padding-bottom:48px;
   }
   header{ padding:36px 22px 22px; }
-  .eyebrow{
-    font-size:11.5px;
-    color:var(--purple);
-    font-weight:700;
-    letter-spacing:1.5px;
+  .title-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
     margin-bottom:8px;
-    text-transform:uppercase;
-  }
-  .eyebrow .sync-dot{
-    display:inline-block; width:6px; height:6px; border-radius:50%;
-    background:var(--gold); margin-right:6px; vertical-align:middle;
   }
   h1{
     font-size:28px;
     font-weight:800;
     letter-spacing:-0.6px;
-    margin-bottom:22px;
     color:var(--purple-deep);
   }
-
-  .progress-card{
-    background:var(--card);
-    border-radius:var(--radius);
-    padding:20px 22px;
+  .history-btn{
+    background:none;
     border:1px solid var(--border);
+    border-radius:100px;
+    padding:7px 14px;
+    font-size:12.5px;
+    font-weight:700;
+    font-family:inherit;
+    color:var(--text-sub);
+    cursor:pointer;
   }
-  .progress-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
-  .progress-count{ font-size:14px; color:var(--text-sub); font-weight:500; letter-spacing:-0.1px; }
-  .progress-count b{ color:var(--purple); font-weight:800; }
-  .progress-pct{ font-size:21px; font-weight:800; color:var(--purple-deep); letter-spacing:-0.5px; }
-  .bar-track{ height:5px; background:var(--border); border-radius:100px; overflow:hidden; }
-  .bar-fill{ height:100%; background:var(--purple); border-radius:100px; transition:width 0.45s cubic-bezier(.4,0,.2,1); width:0%; }
+  .history-btn:active{ background:var(--purple-tint); color:var(--purple-deep); border-color:var(--purple-tint); }
+
+  .progress-text{
+    font-size:13.5px;
+    color:var(--text-sub);
+    font-weight:500;
+    letter-spacing:-0.1px;
+  }
+  .progress-text b{ color:var(--purple-deep); font-weight:800; }
 
   .add-section{ padding:24px 22px 8px; }
   .add-card{
@@ -237,6 +237,7 @@
   .item-name{ font-size:15px; font-weight:700; word-break:break-word; letter-spacing:-0.1px; }
   .item-card.checked .item-name{ text-decoration:line-through; color:var(--text-sub); }
   .item-qty{ font-size:12.5px; color:var(--text-faint); font-weight:600; flex-shrink:0; }
+  .item-qty.multi{ color:#722F37; font-weight:800; font-size:13.5px; }
   .item-sub-row{ display:flex; align-items:center; gap:8px; margin-top:3px; flex-wrap:wrap; }
   .item-price-col{
     font-size:16px;
@@ -300,20 +301,106 @@
   .lightbox img{ max-width:100%; max-height:70vh; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.4); }
   .lightbox-name{ color:#fff; font-size:16px; font-weight:700; margin-top:18px; text-align:center; }
   .lightbox-hint{ color:rgba(255,255,255,0.5); font-size:12.5px; margin-top:6px; }
+
+  .history-screen{
+    position:fixed; inset:0;
+    background:var(--bg);
+    max-width:440px;
+    margin:0 auto;
+    z-index:120;
+    display:none;
+    flex-direction:column;
+    overflow-y:auto;
+  }
+  .history-screen.open{ display:flex; }
+  .history-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 16px;
+    background:var(--card);
+    border-bottom:1px solid var(--border);
+    position:sticky;
+    top:0;
+    z-index:1;
+  }
+  .history-back{
+    width:28px; height:28px;
+    border:none; background:none;
+    font-size:22px;
+    color:var(--purple-deep);
+    cursor:pointer;
+    line-height:1;
+  }
+  .history-title{ font-size:16px; font-weight:800; color:var(--text); }
+
+  .history-month-nav{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:18px;
+    padding:20px 22px 4px;
+  }
+  .month-arrow{
+    width:30px; height:30px;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background:var(--card);
+    font-size:16px;
+    color:var(--text-sub);
+    cursor:pointer;
+  }
+  .month-label{ font-size:16px; font-weight:800; color:var(--purple-deep); min-width:110px; text-align:center; }
+
+  .history-total-card{
+    margin:16px 22px 4px;
+    background:var(--purple-tint);
+    border-radius:var(--radius);
+    padding:20px 22px;
+    text-align:center;
+  }
+  .history-total-label{ font-size:12.5px; color:var(--purple); font-weight:700; margin-bottom:6px; }
+  .history-total-amount{ font-size:28px; font-weight:800; color:var(--purple-deep); letter-spacing:-0.6px; }
+
+  .history-list{
+    padding:18px 22px 40px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .history-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .history-date{
+    text-align:center;
+    flex-shrink:0;
+    min-width:34px;
+  }
+  .history-date-day{ font-size:19px; font-weight:800; color:var(--purple-deep); line-height:1; }
+  .history-date-month{ font-size:10.5px; color:var(--text-faint); font-weight:600; margin-top:2px; }
+  .history-card-mid{ flex:1; min-width:0; }
+  .history-card-names{ font-size:14.5px; font-weight:700; color:var(--text); }
+  .history-card-price{ font-size:14.5px; font-weight:800; color:var(--purple-deep); flex-shrink:0; }
+
+  .history-empty{ text-align:center; padding:60px 22px; color:var(--text-sub); }
+  .history-empty .empty-emoji{ font-size:36px; margin-bottom:12px; opacity:0.6; }
+  .history-empty .empty-title{ font-size:14.5px; font-weight:700; color:var(--text); }
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <div class="eyebrow"><span class="sync-dot"></span>실시간 공유 리스트</div>
-    <h1>쇼핑리스트</h1>
-    <div class="progress-card">
-      <div class="progress-top">
-        <span class="progress-count"><b id="checkedCount">0</b>/<span id="totalCount">0</span> 구매완료</span>
-        <span class="progress-pct" id="pctText">0%</span>
-      </div>
-      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+    <div class="title-row">
+      <h1>장바구니</h1>
+      <button class="history-btn" id="historyBtn">구매내역</button>
     </div>
+    <div class="progress-text"><b id="checkedCount">0</b>/<span id="totalCount">0</span> 구매완료</div>
   </header>
 
   <div class="section" id="pendingSection">
@@ -369,6 +456,28 @@
 </div>
 
 <input type="file" id="fileInput" accept="image/*" style="display:none;">
+
+<div class="history-screen" id="historyScreen">
+  <div class="history-header">
+    <button class="history-back" id="historyBackBtn">‹</button>
+    <div class="history-title">구매 내역</div>
+    <div style="width:28px;"></div>
+  </div>
+  <div class="history-month-nav">
+    <button class="month-arrow" id="prevMonthBtn">‹</button>
+    <div class="month-label" id="monthLabel">2026년 3월</div>
+    <button class="month-arrow" id="nextMonthBtn">›</button>
+  </div>
+  <div class="history-total-card">
+    <div class="history-total-label">이번 달 총 지출</div>
+    <div class="history-total-amount" id="historyTotalAmount">₩0</div>
+  </div>
+  <div class="history-list" id="historyList"></div>
+  <div class="history-empty" id="historyEmpty">
+    <div class="empty-emoji">🧾</div>
+    <div class="empty-title">이 달엔 구매 기록이 없어요</div>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -460,9 +569,6 @@ function render(){
 
   document.getElementById('totalCount').textContent = items.length;
   document.getElementById('checkedCount').textContent = done.length;
-  const pct = items.length ? Math.round((done.length/items.length)*100) : 0;
-  document.getElementById('pctText').textContent = pct + '%';
-  document.getElementById('barFill').style.width = pct + '%';
 
   const pendingTotal = pending.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 1), 0);
   document.getElementById('pendingTotal').textContent = pendingTotal.toLocaleString() + '원';
@@ -512,7 +618,7 @@ function renderCard(item){
       <div class="item-mid">
         <div class="item-top-row">
           <div class="item-name">${escapeHtml(item.name)}</div>
-          <div class="item-qty">×${qty}</div>
+          <div class="item-qty ${qty > 1 ? 'multi' : ''}">×${qty}</div>
         </div>
         <div class="item-sub-row">
           ${authorHtml}
@@ -680,6 +786,87 @@ document.addEventListener('click', async (e) => {
 
 addBtn.addEventListener('click', addItem);
 nameInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addItem(); });
+
+// ---- 구매내역 화면 ----
+const historyBtn = document.getElementById('historyBtn');
+const historyScreen = document.getElementById('historyScreen');
+const historyBackBtn = document.getElementById('historyBackBtn');
+const prevMonthBtn = document.getElementById('prevMonthBtn');
+const nextMonthBtn = document.getElementById('nextMonthBtn');
+const monthLabel = document.getElementById('monthLabel');
+const historyTotalAmount = document.getElementById('historyTotalAmount');
+const historyList = document.getElementById('historyList');
+const historyEmpty = document.getElementById('historyEmpty');
+
+const today = new Date();
+let viewYear = today.getFullYear();
+let viewMonth = today.getMonth(); // 0-indexed
+
+function openHistory(){
+  historyScreen.classList.add('open');
+  renderHistory();
+}
+function closeHistory(){
+  historyScreen.classList.remove('open');
+}
+historyBtn.addEventListener('click', openHistory);
+historyBackBtn.addEventListener('click', closeHistory);
+
+prevMonthBtn.addEventListener('click', () => {
+  viewMonth -= 1;
+  if(viewMonth < 0){ viewMonth = 11; viewYear -= 1; }
+  renderHistory();
+});
+nextMonthBtn.addEventListener('click', () => {
+  viewMonth += 1;
+  if(viewMonth > 11){ viewMonth = 0; viewYear += 1; }
+  renderHistory();
+});
+
+function renderHistory(){
+  monthLabel.textContent = `${viewYear}년 ${viewMonth + 1}월`;
+
+  const purchased = items.filter(i => i.checked && i.purchasedAt && typeof i.purchasedAt.toDate === 'function');
+  const inMonth = purchased.filter(i => {
+    const d = i.purchasedAt.toDate();
+    return d.getFullYear() === viewYear && d.getMonth() === viewMonth;
+  });
+
+  const monthTotal = inMonth.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 1), 0);
+  historyTotalAmount.textContent = '₩' + monthTotal.toLocaleString();
+
+  // 같은 날짜끼리 묶기
+  const groups = {};
+  inMonth.forEach(i => {
+    const d = i.purchasedAt.toDate();
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if(!groups[key]) groups[key] = { date: d, list: [] };
+    groups[key].list.push(i);
+  });
+
+  const groupArr = Object.values(groups).sort((a, b) => b.date - a.date);
+
+  historyEmpty.style.display = groupArr.length ? 'none' : 'block';
+  historyList.innerHTML = groupArr.map(g => {
+    const dayTotal = g.list.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 1), 0);
+    const names = g.list.map(i => i.name);
+    const nameLabel = names.length > 1
+      ? `${escapeHtml(names[0])} 외 ${names.length - 1}개`
+      : escapeHtml(names[0]);
+    return `
+      <div class="history-card">
+        <div class="history-date">
+          <div class="history-date-day">${g.date.getDate()}</div>
+          <div class="history-date-month">${g.date.getMonth() + 1}월</div>
+        </div>
+        <div class="history-card-mid">
+          <div class="history-card-names">${nameLabel}</div>
+        </div>
+        <div class="history-card-price">₩${dayTotal.toLocaleString()}</div>
+      </div>
+    `;
+  }).join('');
+}
 </script>
 </body>
 </html>
