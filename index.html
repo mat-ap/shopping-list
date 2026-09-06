@@ -84,6 +84,31 @@
     margin-top:14px;
   }
   .add-label:first-child{ margin-top:0; }
+
+  .autocomplete-wrap{ position:relative; }
+  .autocomplete-list{
+    display:none;
+    position:absolute;
+    top:calc(100% + 4px);
+    left:0; right:0;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+    z-index:5;
+    box-shadow:0 4px 16px rgba(28,20,35,0.08);
+  }
+  .autocomplete-list.open{ display:block; }
+  .autocomplete-item{
+    padding:11px 14px;
+    font-size:14.5px;
+    color:var(--text);
+    cursor:pointer;
+    border-bottom:1px solid var(--border);
+  }
+  .autocomplete-item:last-child{ border-bottom:none; }
+  .autocomplete-item:active{ background:var(--purple-tint); }
+  .autocomplete-item b{ color:var(--purple-deep); }
   .add-input{
     width:100%;
     background:var(--bg);
@@ -372,10 +397,14 @@
     background:var(--card);
     border:1px solid var(--border);
     border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .history-card-row{
     padding:14px 16px;
     display:flex;
     align-items:center;
     gap:14px;
+    cursor:pointer;
   }
   .history-date{
     text-align:center;
@@ -387,10 +416,81 @@
   .history-card-mid{ flex:1; min-width:0; }
   .history-card-names{ font-size:14.5px; font-weight:700; color:var(--text); }
   .history-card-price{ font-size:14.5px; font-weight:800; color:var(--purple-deep); flex-shrink:0; }
+  .history-caret{ font-size:9px; color:var(--text-faint); flex-shrink:0; }
+
+  .history-detail{
+    border-top:1px solid var(--border);
+    padding:6px 16px 12px 64px;
+    background:var(--bg);
+  }
+  .history-detail-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:7px 0;
+  }
+  .history-detail-name{ font-size:13px; color:var(--text-sub); font-weight:600; }
+  .history-detail-price{ font-size:13px; color:var(--text); font-weight:700; }
 
   .history-empty{ text-align:center; padding:60px 22px; color:var(--text-sub); }
   .history-empty .empty-emoji{ font-size:36px; margin-bottom:12px; opacity:0.6; }
   .history-empty .empty-title{ font-size:14.5px; font-weight:700; color:var(--text); }
+
+  .edit-modal{
+    position:fixed; inset:0;
+    background:rgba(28,20,35,0.5);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:130;
+  }
+  .edit-modal.open{ display:flex; }
+  .edit-sheet{
+    background:var(--card);
+    width:100%;
+    max-width:440px;
+    border-radius:20px 20px 0 0;
+    padding:22px 20px 28px;
+    max-height:85vh;
+    overflow-y:auto;
+  }
+  .edit-sheet-title{
+    font-size:16px;
+    font-weight:800;
+    color:var(--purple-deep);
+    margin-bottom:16px;
+    text-align:center;
+  }
+  .edit-btn-row{
+    display:flex;
+    gap:8px;
+    margin-top:20px;
+  }
+  .edit-cancel-btn{
+    flex:1;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:15px 0;
+    font-size:15px;
+    font-weight:700;
+    font-family:inherit;
+    color:var(--text-sub);
+    cursor:pointer;
+  }
+  .edit-btn-row .add-btn{
+    flex:2;
+    margin-top:0;
+  }
+
+  .item-edit-area{
+    display:flex;
+    align-items:center;
+    gap:13px;
+    flex:1;
+    min-width:0;
+    cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -420,7 +520,10 @@
   <div class="add-section">
     <div class="add-card">
       <div class="add-label">품목</div>
-      <input type="text" class="add-input" id="nameInput" placeholder="살 품목 (예: 우유)" maxlength="40">
+      <div class="autocomplete-wrap">
+        <input type="text" class="add-input" id="nameInput" placeholder="살 품목 (예: 우유)" maxlength="40" autocomplete="off">
+        <div class="autocomplete-list" id="autocompleteList"></div>
+      </div>
 
       <div class="add-label">수량 / 가격</div>
       <div class="add-row2">
@@ -430,8 +533,8 @@
         <input type="text" inputmode="numeric" class="add-input price-input" id="priceInput" placeholder="가격 (원)">
       </div>
 
-      <div class="add-label">메모</div>
-      <input type="text" class="add-input" id="memoInput" placeholder="메모 (선택)" maxlength="40">
+      <div class="add-label">메모 / 링크</div>
+      <input type="text" class="add-input" id="memoInput" placeholder="메모나 구매 링크를 입력하세요" maxlength="120">
 
       <div class="add-label">담당</div>
       <div class="person-row" id="personRow">
@@ -453,6 +556,37 @@
   <img id="lightboxImg" src="" alt="">
   <div class="lightbox-name" id="lightboxName"></div>
   <div class="lightbox-hint">화면을 탭하면 닫혀요</div>
+</div>
+
+<div class="edit-modal" id="editModal">
+  <div class="edit-sheet">
+    <div class="edit-sheet-title">항목 수정</div>
+
+    <div class="add-label">품목</div>
+    <input type="text" class="add-input" id="editNameInput" maxlength="40">
+
+    <div class="add-label">수량 / 가격</div>
+    <div class="add-row2">
+      <div class="qty-select-wrap">
+        <select class="qty-select" id="editQtySelect"></select>
+      </div>
+      <input type="text" inputmode="numeric" class="add-input price-input" id="editPriceInput" placeholder="가격 (원)">
+    </div>
+
+    <div class="add-label">메모 / 링크</div>
+    <input type="text" class="add-input" id="editMemoInput" placeholder="메모나 구매 링크를 입력하세요" maxlength="120">
+
+    <div class="add-label">담당</div>
+    <div class="person-row" id="editPersonRow">
+      <div class="person-chip" data-person="SJ">SJ</div>
+      <div class="person-chip" data-person="JW">JW</div>
+    </div>
+
+    <div class="edit-btn-row">
+      <button class="edit-cancel-btn" id="editCancelBtn">취소</button>
+      <button class="add-btn" id="editSaveBtn">저장</button>
+    </div>
+  </div>
 </div>
 
 <input type="file" id="fileInput" accept="image/*" style="display:none;">
@@ -533,6 +667,67 @@ function validateForm(){
 addBtn.disabled = true;
 nameInput.addEventListener('input', validateForm);
 
+// ---- 품목 자동완성 ----
+const autocompleteList = document.getElementById('autocompleteList');
+
+function escapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+function getNameSuggestions(query){
+  const q = query.trim().toLowerCase();
+  if(!q) return [];
+  const seen = new Set();
+  const results = [];
+  for(const it of items){
+    if(!it.name) continue;
+    const lower = it.name.toLowerCase();
+    if(lower.includes(q) && !seen.has(lower)){
+      seen.add(lower);
+      results.push(it);
+      if(results.length >= 5) break;
+    }
+  }
+  return results;
+}
+
+function renderAutocomplete(){
+  const suggestions = getNameSuggestions(nameInput.value);
+  if(suggestions.length === 0){
+    autocompleteList.classList.remove('open');
+    autocompleteList.innerHTML = '';
+    return;
+  }
+  const q = nameInput.value.trim();
+  const re = new RegExp(`(${escapeRegex(q)})`, 'ig');
+  autocompleteList.innerHTML = suggestions.map(it => {
+    const highlighted = escapeHtml(it.name).replace(re, '<b>$1</b>');
+    return `<div class="autocomplete-item" data-name="${escapeHtml(it.name)}">${highlighted}</div>`;
+  }).join('');
+  autocompleteList.classList.add('open');
+}
+
+nameInput.addEventListener('input', renderAutocomplete);
+nameInput.addEventListener('focus', renderAutocomplete);
+
+autocompleteList.addEventListener('click', (e) => {
+  const item = e.target.closest('.autocomplete-item');
+  if(!item) return;
+  const chosenName = item.dataset.name;
+  const match = items.find(it => it.name === chosenName);
+  nameInput.value = chosenName;
+  qtySelect.value = '1';
+  priceInput.value = match && match.price ? Number(match.price).toLocaleString() : '';
+  memoInput.value = match && match.memo ? match.memo : '';
+  autocompleteList.classList.remove('open');
+  autocompleteList.innerHTML = '';
+  validateForm();
+});
+
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.autocomplete-wrap')){
+    autocompleteList.classList.remove('open');
+  }
+});
+
 // 담당자 선택 (토글 가능)
 personRow.addEventListener('click', (e) => {
   const chip = e.target.closest('.person-chip');
@@ -609,12 +804,7 @@ function renderCard(item){
     ? `<span class="item-author ${item.author.toLowerCase()}">${escapeHtml(item.author)}</span>`
     : '';
   const dateHtml = item.checked ? `<span class="item-date">${formatDate(item.purchasedAt)}</span>` : '';
-  return `
-    <div class="item-card ${item.checked ? 'checked' : ''}" data-id="${item.id}">
-      <div class="thumb-wrap">
-        <button class="thumb" data-action="${thumbAction}" data-id="${item.id}">${thumbContent}</button>
-        ${camBadge}
-      </div>
+  const midAndPrice = `
       <div class="item-mid">
         <div class="item-top-row">
           <div class="item-name">${escapeHtml(item.name)}</div>
@@ -628,6 +818,17 @@ function renderCard(item){
         </div>
       </div>
       <div class="item-price-col">${priceHtml}</div>
+  `;
+  const midAndPriceHtml = item.checked
+    ? midAndPrice
+    : `<div class="item-edit-area" data-action="edit" data-id="${item.id}">${midAndPrice}</div>`;
+  return `
+    <div class="item-card ${item.checked ? 'checked' : ''}" data-id="${item.id}">
+      <div class="thumb-wrap">
+        <button class="thumb" data-action="${thumbAction}" data-id="${item.id}">${thumbContent}</button>
+        ${camBadge}
+      </div>
+      ${midAndPriceHtml}
       <button class="check-btn ${item.checked ? 'on' : ''}" data-action="check" data-id="${item.id}">
         <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -758,6 +959,7 @@ lightbox.addEventListener('click', () => {
 });
 
 document.addEventListener('click', async (e) => {
+  if(e.target.closest('.item-link')) return; // 바로가기 링크는 수정창을 열지 않음
   const btn = e.target.closest('[data-action]');
   if(!btn) return;
   const id = btn.dataset.id;
@@ -781,7 +983,94 @@ document.addEventListener('click', async (e) => {
     fileInput.click();
   }else if(btn.dataset.action === 'zoom'){
     openLightbox(item);
+  }else if(btn.dataset.action === 'edit'){
+    openEditSheet(item);
   }
+});
+
+// ---- 항목 수정 바텀시트 ----
+const editModal = document.getElementById('editModal');
+const editNameInput = document.getElementById('editNameInput');
+const editQtySelect = document.getElementById('editQtySelect');
+const editPriceInput = document.getElementById('editPriceInput');
+const editMemoInput = document.getElementById('editMemoInput');
+const editPersonRow = document.getElementById('editPersonRow');
+const editSaveBtn = document.getElementById('editSaveBtn');
+const editCancelBtn = document.getElementById('editCancelBtn');
+
+let editQtyOptionsHtml = '';
+for(let n = 1; n <= 99; n++){
+  editQtyOptionsHtml += `<option value="${n}">${n}</option>`;
+}
+editQtySelect.innerHTML = editQtyOptionsHtml;
+
+let editingId = null;
+let editingSelectedPerson = null;
+
+function openEditSheet(item){
+  editingId = item.id;
+  editingSelectedPerson = item.author || null;
+  editNameInput.value = item.name || '';
+  editQtySelect.value = String(item.qty || 1);
+  editPriceInput.value = item.price ? Number(item.price).toLocaleString() : '';
+  editMemoInput.value = item.memo || '';
+  editPersonRow.querySelectorAll('.person-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.person === editingSelectedPerson);
+  });
+  editModal.classList.add('open');
+}
+
+function closeEditSheet(){
+  editModal.classList.remove('open');
+  editingId = null;
+}
+
+editCancelBtn.addEventListener('click', closeEditSheet);
+editModal.addEventListener('click', (e) => {
+  if(e.target === editModal) closeEditSheet();
+});
+
+editPersonRow.addEventListener('click', (e) => {
+  const chip = e.target.closest('.person-chip');
+  if(!chip) return;
+  const already = chip.classList.contains('active');
+  editPersonRow.querySelectorAll('.person-chip').forEach(c => c.classList.remove('active'));
+  if(!already){
+    chip.classList.add('active');
+    editingSelectedPerson = chip.dataset.person;
+  }else{
+    editingSelectedPerson = null;
+  }
+});
+
+editPriceInput.addEventListener('input', () => {
+  const digits = editPriceInput.value.replace(/[^0-9]/g, '');
+  editPriceInput.value = digits ? Number(digits).toLocaleString() : '';
+});
+
+editSaveBtn.addEventListener('click', async () => {
+  if(!editingId) return;
+  const name = editNameInput.value.trim();
+  const priceDigits = editPriceInput.value.replace(/[^0-9]/g, '');
+  if(!name || !priceDigits || !editingSelectedPerson){
+    alert('품목, 가격, 담당자는 꼭 입력해주세요.');
+    return;
+  }
+  const qty = parseInt(editQtySelect.value) || 1;
+  const price = parseInt(priceDigits);
+  const memo = editMemoInput.value.trim();
+
+  editSaveBtn.disabled = true;
+  try{
+    await updateDoc(doc(db, "items", editingId), {
+      name, qty, price, memo, author: editingSelectedPerson
+    });
+    closeEditSheet();
+  }catch(e){
+    console.error('수정 실패', e);
+    alert('수정에 실패했어요. 인터넷 연결을 확인해주세요.');
+  }
+  editSaveBtn.disabled = false;
 });
 
 addBtn.addEventListener('click', addItem);
@@ -848,25 +1137,53 @@ function renderHistory(){
 
   historyEmpty.style.display = groupArr.length ? 'none' : 'block';
   historyList.innerHTML = groupArr.map(g => {
+    const key = `${g.date.getFullYear()}-${g.date.getMonth()}-${g.date.getDate()}`;
     const dayTotal = g.list.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 1), 0);
     const names = g.list.map(i => i.name);
     const nameLabel = names.length > 1
       ? `${escapeHtml(names[0])} 외 ${names.length - 1}개`
       : escapeHtml(names[0]);
+    const isOpen = expandedHistoryKeys.has(key);
+    const detailHtml = isOpen
+      ? `<div class="history-detail">${g.list.map(i => {
+          const q = i.qty || 1;
+          const unit = Number(i.price) || 0;
+          return `
+            <div class="history-detail-row">
+              <span class="history-detail-name">${escapeHtml(i.name)} ${q > 1 ? `×${q}` : ''}</span>
+              <span class="history-detail-price">${(unit * q).toLocaleString()}원</span>
+            </div>
+          `;
+        }).join('')}</div>`
+      : '';
     return `
-      <div class="history-card">
-        <div class="history-date">
-          <div class="history-date-day">${g.date.getDate()}</div>
-          <div class="history-date-month">${g.date.getMonth() + 1}월</div>
+      <div class="history-card ${isOpen ? 'open' : ''}">
+        <div class="history-card-row" data-action="toggle-history" data-key="${key}">
+          <div class="history-date">
+            <div class="history-date-day">${g.date.getDate()}</div>
+            <div class="history-date-month">${g.date.getMonth() + 1}월</div>
+          </div>
+          <div class="history-card-mid">
+            <div class="history-card-names">${nameLabel}</div>
+          </div>
+          <div class="history-card-price">₩${dayTotal.toLocaleString()}</div>
+          <div class="history-caret">${isOpen ? '▲' : '▼'}</div>
         </div>
-        <div class="history-card-mid">
-          <div class="history-card-names">${nameLabel}</div>
-        </div>
-        <div class="history-card-price">₩${dayTotal.toLocaleString()}</div>
+        ${detailHtml}
       </div>
     `;
   }).join('');
 }
+
+const expandedHistoryKeys = new Set();
+historyList.addEventListener('click', (e) => {
+  const row = e.target.closest('[data-action="toggle-history"]');
+  if(!row) return;
+  const key = row.dataset.key;
+  if(expandedHistoryKeys.has(key)) expandedHistoryKeys.delete(key);
+  else expandedHistoryKeys.add(key);
+  renderHistory();
+});
 </script>
 </body>
 </html>
