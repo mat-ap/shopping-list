@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>쇼핑리스트</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --purple:#4B1E6D;
+    --purple-deep:#331347;
+    --purple-tint:#F1EAF6;
+    --gold:#C9A24B;
+    --bg:#FAF8F5;
+    --card:#FFFFFF;
+    --text:#1C1B1F;
+    --text-sub:#8A8580;
+    --text-faint:#C4BFB8;
+    --border:#EAE5DE;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    max-width:440px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--bg);
+    padding-bottom:48px;
+  }
+  header{ padding:36px 22px 22px; }
+  .eyebrow{
+    font-size:11.5px;
+    color:var(--purple);
+    font-weight:700;
+    letter-spacing:1.5px;
+    margin-bottom:8px;
+    text-transform:uppercase;
+  }
+  .eyebrow .sync-dot{
+    display:inline-block; width:6px; height:6px; border-radius:50%;
+    background:var(--gold); margin-right:6px; vertical-align:middle;
+  }
+  h1{
+    font-size:28px;
+    font-weight:800;
+    letter-spacing:-0.6px;
+    margin-bottom:22px;
+    color:var(--purple-deep);
+  }
+
+  .progress-card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:20px 22px;
+    border:1px solid var(--border);
+  }
+  .progress-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+  .progress-count{ font-size:14px; color:var(--text-sub); font-weight:500; letter-spacing:-0.1px; }
+  .progress-count b{ color:var(--purple); font-weight:800; }
+  .progress-pct{ font-size:21px; font-weight:800; color:var(--purple-deep); letter-spacing:-0.5px; }
+  .bar-track{ height:5px; background:var(--border); border-radius:100px; overflow:hidden; }
+  .bar-fill{ height:100%; background:var(--purple); border-radius:100px; transition:width 0.45s cubic-bezier(.4,0,.2,1); width:0%; }
+
+  .add-section{ padding:24px 22px 8px; }
+  .add-card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:20px;
+    border:1px solid var(--border);
+  }
+  .add-label{
+    font-size:11px;
+    font-weight:700;
+    color:var(--text-faint);
+    letter-spacing:1px;
+    text-transform:uppercase;
+    margin-bottom:8px;
+    margin-top:14px;
+  }
+  .add-label:first-child{ margin-top:0; }
+  .add-input{
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:15px;
+    font-family:inherit;
+    color:var(--text);
+    outline:none;
+    transition:border-color 0.15s;
+  }
+  .add-input:focus{ border-color:var(--purple); background:#fff; }
+  .add-input::placeholder{ color:var(--text-faint); }
+  .add-row2{ display:flex; gap:8px; }
+  .add-row2 .add-input{ flex:1; }
+  .price-input{ text-align:right; }
+
+  .qty-select-wrap{
+    flex:1;
+    position:relative;
+  }
+  .qty-select{
+    width:100%;
+    appearance:none;
+    -webkit-appearance:none;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:15px;
+    font-family:inherit;
+    font-weight:700;
+    color:var(--text);
+    text-align:center;
+    text-align-last:center;
+    cursor:pointer;
+  }
+  .qty-select-wrap::after{
+    content:'';
+    position:absolute;
+    right:14px;
+    top:50%;
+    width:8px; height:8px;
+    border-right:2px solid var(--text-faint);
+    border-bottom:2px solid var(--text-faint);
+    transform:translateY(-65%) rotate(45deg);
+    pointer-events:none;
+  }
+
+  .person-row{ display:flex; gap:8px; }
+  .person-chip{
+    flex:1;
+    text-align:center;
+    padding:10px 0;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--bg);
+    font-size:14px;
+    font-weight:700;
+    color:var(--text-sub);
+    cursor:pointer;
+    transition:all 0.15s;
+    letter-spacing:0.2px;
+  }
+  .person-chip[data-person="SJ"].active{
+    background:var(--purple);
+    border-color:var(--purple);
+    color:#fff;
+  }
+  .person-chip[data-person="JW"].active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#fff;
+  }
+
+  .add-btn{
+    width:100%;
+    background:var(--purple-deep);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:15px 0;
+    font-size:15px;
+    font-weight:700;
+    font-family:inherit;
+    cursor:pointer;
+    transition:background 0.15s, transform 0.1s;
+    margin-top:20px;
+    letter-spacing:0.2px;
+  }
+  .add-btn:active{ background:var(--purple); transform:scale(0.98); }
+
+  .section{ padding:28px 22px 0; }
+  .section-title{
+    font-size:12px;
+    font-weight:700;
+    color:var(--text-faint);
+    letter-spacing:1.2px;
+    text-transform:uppercase;
+    margin-bottom:12px;
+    padding-left:2px;
+  }
+
+  .item-list{ display:flex; flex-direction:column; }
+  .item-card{
+    background:var(--card);
+    padding:16px 2px;
+    display:flex;
+    align-items:center;
+    gap:13px;
+    border-bottom:1px solid var(--border);
+    transition:opacity 0.3s;
+  }
+  .item-list .item-card:first-child{ border-top:1px solid var(--border); }
+  .item-card.checked{ opacity:0.45; }
+
+  .thumb-wrap{ position:relative; flex-shrink:0; }
+  .thumb{
+    width:54px; height:54px; border-radius:10px; background:var(--purple-tint);
+    display:flex; align-items:center; justify-content:center; font-size:22px;
+    overflow:hidden; cursor:pointer; border:none; padding:0;
+  }
+  .thumb img{ width:100%; height:100%; object-fit:cover; }
+  .cam-badge{
+    position:absolute; right:-3px; bottom:-3px; width:20px; height:20px; border-radius:50%;
+    background:var(--purple-deep); border:2px solid var(--card); display:flex; align-items:center;
+    justify-content:center; font-size:10px; z-index:2; cursor:pointer;
+  }
+
+  .item-mid{ flex:1; min-width:0; }
+  .item-top-row{ display:flex; align-items:baseline; gap:6px; margin-bottom:3px; }
+  .item-name{ font-size:15px; font-weight:700; word-break:break-word; letter-spacing:-0.1px; }
+  .item-card.checked .item-name{ text-decoration:line-through; color:var(--text-sub); }
+  .item-qty{ font-size:12.5px; color:var(--text-faint); font-weight:600; flex-shrink:0; }
+  .item-sub-row{ display:flex; align-items:center; gap:8px; margin-top:3px; flex-wrap:wrap; }
+  .item-price{ font-size:13.5px; color:var(--purple); font-weight:800; }
+  .item-memo{ font-size:12px; color:var(--text-sub); }
+  .item-author{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:19px; height:19px;
+    border-radius:50%;
+    font-size:9.5px;
+    font-weight:800;
+    color:#fff;
+    flex-shrink:0;
+  }
+  .item-author.sj{ background:var(--purple); }
+  .item-author.jw{ background:var(--gold); }
+
+  .check-btn{
+    width:26px; height:26px; border-radius:50%; border:1.5px solid var(--border); background:#fff;
+    flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:all 0.15s; padding:0;
+  }
+  .check-btn.on{ background:var(--purple-deep); border-color:var(--purple-deep); }
+  .check-btn svg{ width:13px; height:13px; opacity:0; transition:opacity 0.15s; }
+  .check-btn.on svg{ opacity:1; }
+
+  .del-btn{
+    width:26px; height:26px; border:none; background:transparent; color:var(--text-faint);
+    font-size:17px; cursor:pointer; flex-shrink:0; border-radius:50%;
+  }
+  .del-btn:active{ background:var(--border); }
+
+  .empty{ text-align:center; padding:70px 22px; color:var(--text-sub); }
+  .empty-emoji{ font-size:38px; margin-bottom:14px; opacity:0.6; }
+  .empty-title{ font-size:15.5px; font-weight:700; color:var(--text); margin-bottom:4px; }
+  .empty-sub{ font-size:13.5px; }
+
+  .lightbox{
+    position:fixed; inset:0; background:rgba(28,20,35,0.94); display:none;
+    align-items:center; justify-content:center; flex-direction:column; z-index:100; padding:24px;
+  }
+  .lightbox.open{ display:flex; }
+  .lightbox img{ max-width:100%; max-height:70vh; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+  .lightbox-name{ color:#fff; font-size:16px; font-weight:700; margin-top:18px; text-align:center; }
+  .lightbox-hint{ color:rgba(255,255,255,0.5); font-size:12.5px; margin-top:6px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="eyebrow"><span class="sync-dot"></span>실시간 공유 리스트</div>
+    <h1>쇼핑리스트</h1>
+    <div class="progress-card">
+      <div class="progress-top">
+        <span class="progress-count"><b id="checkedCount">0</b>/<span id="totalCount">0</span> 구매완료</span>
+        <span class="progress-pct" id="pctText">0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+    </div>
+  </header>
+
+  <div class="add-section">
+    <div class="add-card">
+      <div class="add-label">품목</div>
+      <input type="text" class="add-input" id="nameInput" placeholder="살 품목 (예: 우유)" maxlength="40">
+
+      <div class="add-label">수량 / 가격</div>
+      <div class="add-row2">
+        <div class="qty-select-wrap">
+          <select class="qty-select" id="qtySelect"></select>
+        </div>
+        <input type="text" inputmode="numeric" class="add-input price-input" id="priceInput" placeholder="가격 (원)">
+      </div>
+
+      <div class="add-label">메모</div>
+      <input type="text" class="add-input" id="memoInput" placeholder="메모 (선택)" maxlength="40">
+
+      <div class="add-label">담당</div>
+      <div class="person-row" id="personRow">
+        <div class="person-chip" data-person="SJ">SJ</div>
+        <div class="person-chip" data-person="JW">JW</div>
+      </div>
+
+      <button class="add-btn" id="addBtn">추가하기</button>
+    </div>
+  </div>
+
+  <div class="section" id="pendingSection">
+    <div class="section-title">담은 아이템</div>
+    <div class="item-list" id="pendingList"></div>
+  </div>
+
+  <div class="section" id="doneSection" style="display:none;">
+    <div class="section-title">구매완료</div>
+    <div class="item-list" id="doneList"></div>
+  </div>
+
+  <div class="empty" id="emptyState">
+    <div class="empty-emoji">🛒</div>
+    <div class="empty-title">아직 담은 품목이 없어요</div>
+    <div class="empty-sub">위에 살 물건을 입력하고 추가해보세요</div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <img id="lightboxImg" src="" alt="">
+  <div class="lightbox-name" id="lightboxName"></div>
+  <div class="lightbox-hint">화면을 탭하면 닫혀요</div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none;">
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, onSnapshot,
+  doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy
+} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAfg4pYUE_c7zkcENcE0Ug_9orLGrSJIxI",
+  authDomain: "shopping-9ccc3.firebaseapp.com",
+  projectId: "shopping-9ccc3",
+  storageBucket: "shopping-9ccc3.firebasestorage.app",
+  messagingSenderId: "433317642835",
+  appId: "1:433317642835:web:a13d08a90094ca97133ca6"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const itemsCol = collection(db, "items");
+const itemsQuery = query(itemsCol, orderBy("createdAt", "desc"));
+
+let items = [];
+let selectedPerson = null;
+
+const pendingList = document.getElementById('pendingList');
+const doneList = document.getElementById('doneList');
+const pendingSection = document.getElementById('pendingSection');
+const doneSection = document.getElementById('doneSection');
+const emptyState = document.getElementById('emptyState');
+const nameInput = document.getElementById('nameInput');
+const priceInput = document.getElementById('priceInput');
+const memoInput = document.getElementById('memoInput');
+const addBtn = document.getElementById('addBtn');
+const personRow = document.getElementById('personRow');
+
+// ---- 수량 선택 (네이티브 select, 아이폰에서는 자동으로 휠 형태) ----
+const qtySelect = document.getElementById('qtySelect');
+let qtyOptionsHtml = '';
+for(let n = 1; n <= 99; n++){
+  qtyOptionsHtml += `<option value="${n}">${n}</option>`;
+}
+qtySelect.innerHTML = qtyOptionsHtml;
+qtySelect.value = '1';
+
+// 담당자 선택 (토글 가능)
+personRow.addEventListener('click', (e) => {
+  const chip = e.target.closest('.person-chip');
+  if(!chip) return;
+  const already = chip.classList.contains('active');
+  personRow.querySelectorAll('.person-chip').forEach(c => c.classList.remove('active'));
+  if(!already){
+    chip.classList.add('active');
+    selectedPerson = chip.dataset.person;
+  }else{
+    selectedPerson = null;
+  }
+});
+
+// 가격 입력 중 천단위 콤마 자동 포맷
+priceInput.addEventListener('input', () => {
+  const digits = priceInput.value.replace(/[^0-9]/g, '');
+  priceInput.value = digits ? Number(digits).toLocaleString() : '';
+});
+
+// 실시간 동기화: Firestore 리스너
+onSnapshot(itemsQuery, (snapshot) => {
+  items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  render();
+}, (err) => {
+  console.error('실시간 동기화 오류', err);
+});
+
+function render(){
+  const pending = items.filter(i => !i.checked);
+  const done = items.filter(i => i.checked);
+
+  document.getElementById('totalCount').textContent = items.length;
+  document.getElementById('checkedCount').textContent = done.length;
+  const pct = items.length ? Math.round((done.length/items.length)*100) : 0;
+  document.getElementById('pctText').textContent = pct + '%';
+  document.getElementById('barFill').style.width = pct + '%';
+
+  emptyState.style.display = items.length === 0 ? 'block' : 'none';
+  pendingSection.style.display = pending.length ? 'block' : 'none';
+  doneSection.style.display = done.length ? 'block' : 'none';
+
+  pendingList.innerHTML = pending.map(renderCard).join('');
+  doneList.innerHTML = done.map(renderCard).join('');
+}
+
+function renderCard(item){
+  const thumbContent = item.image ? `<img src="${item.image}" alt="">` : pickEmoji(item.name);
+  const thumbAction = item.image ? 'zoom' : 'photo';
+  const camBadge = item.image
+    ? `<button class="cam-badge" data-action="photo" data-id="${item.id}">📷</button>`
+    : `<span class="cam-badge">📷</span>`;
+  const priceHtml = item.price ? `<span class="item-price">${Number(item.price).toLocaleString()}원</span>` : '';
+  const memoHtml = item.memo ? `<span class="item-memo">${escapeHtml(item.memo)}</span>` : '';
+  const authorHtml = item.author
+    ? `<span class="item-author ${item.author.toLowerCase()}">${escapeHtml(item.author)}</span>`
+    : '';
+  return `
+    <div class="item-card ${item.checked ? 'checked' : ''}" data-id="${item.id}">
+      <div class="thumb-wrap">
+        <button class="thumb" data-action="${thumbAction}" data-id="${item.id}">${thumbContent}</button>
+        ${camBadge}
+      </div>
+      <div class="item-mid">
+        <div class="item-top-row">
+          <div class="item-name">${escapeHtml(item.name)}</div>
+          <div class="item-qty">×${item.qty || 1}</div>
+        </div>
+        <div class="item-sub-row">
+          ${authorHtml}
+          ${priceHtml}
+          ${memoHtml}
+        </div>
+      </div>
+      <button class="check-btn ${item.checked ? 'on' : ''}" data-action="check" data-id="${item.id}">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="del-btn" data-action="del" data-id="${item.id}">✕</button>
+    </div>
+  `;
+}
+
+const EMOJI_MAP = [
+  [['우유','치즈','계란','요거트'], '🥛'],
+  [['빵','베이커리'], '🍞'],
+  [['과일','사과','바나나'], '🍎'],
+  [['채소','야채'], '🥬'],
+  [['고기','정육'], '🥩'],
+  [['라면','과자','스낵'], '🍪'],
+  [['휴지','화장지','물티슈'], '🧻'],
+  [['세제','샴푸','비누'], '🧴'],
+  [['쓰레기봉투'], '🗑️'],
+  [['커피','차'], '☕'],
+];
+function pickEmoji(name){
+  const lower = (name || '').toLowerCase();
+  for(const [keywords, emoji] of EMOJI_MAP){
+    if(keywords.some(k => lower.includes(k))) return emoji;
+  }
+  return '🛍️';
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+async function addItem(){
+  const name = nameInput.value.trim();
+  if(!name) return;
+  const qty = parseInt(qtySelect.value) || 1;
+  const priceDigits = priceInput.value.replace(/[^0-9]/g, '');
+  const price = priceDigits ? parseInt(priceDigits) : null;
+  const memo = memoInput.value.trim();
+  const author = selectedPerson;
+
+  addBtn.disabled = true;
+  try{
+    await addDoc(itemsCol, {
+      name, qty, price, memo, author,
+      checked: false,
+      image: null,
+      createdAt: serverTimestamp()
+    });
+    nameInput.value = '';
+    qtySelect.value = '1';
+    priceInput.value = '';
+    memoInput.value = '';
+    nameInput.focus();
+  }catch(e){
+    console.error('추가 실패', e);
+    alert('추가에 실패했어요. 인터넷 연결을 확인해주세요.');
+  }
+  addBtn.disabled = false;
+}
+
+function resizeImage(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 500;
+        let { width, height } = img;
+        if(width > height){
+          if(width > maxSize){ height = Math.round(height * maxSize/width); width = maxSize; }
+        }else{
+          if(height > maxSize){ width = Math.round(width * maxSize/height); height = maxSize; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+const fileInput = document.getElementById('fileInput');
+let pendingPhotoId = null;
+
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file || !pendingPhotoId) return;
+  try{
+    const dataUrl = await resizeImage(file);
+    await updateDoc(doc(db, "items", pendingPhotoId), { image: dataUrl });
+  }catch(err){
+    console.error('사진 저장 실패', err);
+    alert('사진이 너무 커서 저장에 실패했을 수 있어요. 다른 사진으로 시도해주세요.');
+  }
+  fileInput.value = '';
+  pendingPhotoId = null;
+});
+
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+const lightboxName = document.getElementById('lightboxName');
+
+function openLightbox(item){
+  lightboxImg.src = item.image;
+  lightboxName.textContent = item.name;
+  lightbox.classList.add('open');
+}
+lightbox.addEventListener('click', () => {
+  lightbox.classList.remove('open');
+  lightboxImg.src = '';
+});
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const item = items.find(i => i.id === id);
+  if(!item) return;
+
+  if(btn.dataset.action === 'check'){
+    try{ await updateDoc(doc(db, "items", id), { checked: !item.checked }); }
+    catch(e){ console.error('체크 실패', e); }
+  }else if(btn.dataset.action === 'del'){
+    try{ await deleteDoc(doc(db, "items", id)); }
+    catch(e){ console.error('삭제 실패', e); }
+  }else if(btn.dataset.action === 'photo'){
+    pendingPhotoId = id;
+    fileInput.click();
+  }else if(btn.dataset.action === 'zoom'){
+    openLightbox(item);
+  }
+});
+
+addBtn.addEventListener('click', addItem);
+nameInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addItem(); });
+</script>
+</body>
+</html>
