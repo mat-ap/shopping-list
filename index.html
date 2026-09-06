@@ -249,6 +249,8 @@
   }
   .item-card.checked .item-price-col{ color:var(--text-sub); }
   .item-memo{ font-size:12px; color:var(--text-sub); }
+  .item-unit{ font-size:11.5px; color:var(--text-faint); font-weight:600; }
+  .item-date{ font-size:11.5px; color:var(--text-faint); font-weight:600; }
   .item-link{
     font-size:12.5px;
     color:var(--purple);
@@ -322,15 +324,10 @@
     <div class="item-list" id="pendingList"></div>
   </div>
 
-  <div class="section" id="doneSection" style="display:none;">
-    <div class="section-title">구매완료</div>
-    <div class="item-list" id="doneList"></div>
-  </div>
-
   <div class="empty" id="emptyState">
     <div class="empty-emoji">🛒</div>
     <div class="empty-title">아직 담은 품목이 없어요</div>
-    <div class="empty-sub">위에 살 물건을 입력하고 추가해보세요</div>
+    <div class="empty-sub">아래에 살 물건을 입력하고 추가해보세요</div>
   </div>
 
   <div class="add-section">
@@ -357,6 +354,11 @@
 
       <button class="add-btn" id="addBtn">추가하기</button>
     </div>
+  </div>
+
+  <div class="section" id="doneSection" style="display:none;">
+    <div class="section-title">구매완료</div>
+    <div class="item-list" id="doneList"></div>
   </div>
 </div>
 
@@ -473,13 +475,25 @@ function render(){
   doneList.innerHTML = done.map(renderCard).join('');
 }
 
+function formatDate(ts){
+  if(!ts || typeof ts.toDate !== 'function') return '';
+  const d = ts.toDate();
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 구매`;
+}
+
 function renderCard(item){
   const thumbContent = item.image ? `<img src="${item.image}" alt="">` : pickEmoji(item.name);
   const thumbAction = item.image ? 'zoom' : 'photo';
   const camBadge = item.image
     ? `<button class="cam-badge" data-action="photo" data-id="${item.id}">📷</button>`
     : `<span class="cam-badge">📷</span>`;
-  const priceHtml = item.price ? Number(item.price).toLocaleString() + '원' : '';
+  const qty = item.qty || 1;
+  const unitPrice = Number(item.price) || 0;
+  const totalPrice = unitPrice * qty;
+  const priceHtml = unitPrice ? totalPrice.toLocaleString() + '원' : '';
+  const unitPriceHtml = (unitPrice && qty > 1)
+    ? `<span class="item-unit">개당 ${unitPrice.toLocaleString()}원</span>`
+    : '';
   const memoHtml = item.memo
     ? (isUrl(item.memo)
         ? `<a class="item-link" href="${toHref(item.memo)}" target="_blank" rel="noopener noreferrer">바로가기 →</a>`
@@ -488,6 +502,7 @@ function renderCard(item){
   const authorHtml = item.author
     ? `<span class="item-author ${item.author.toLowerCase()}">${escapeHtml(item.author)}</span>`
     : '';
+  const dateHtml = item.checked ? `<span class="item-date">${formatDate(item.purchasedAt)}</span>` : '';
   return `
     <div class="item-card ${item.checked ? 'checked' : ''}" data-id="${item.id}">
       <div class="thumb-wrap">
@@ -497,11 +512,13 @@ function renderCard(item){
       <div class="item-mid">
         <div class="item-top-row">
           <div class="item-name">${escapeHtml(item.name)}</div>
-          <div class="item-qty">×${item.qty || 1}</div>
+          <div class="item-qty">×${qty}</div>
         </div>
         <div class="item-sub-row">
           ${authorHtml}
+          ${unitPriceHtml}
           ${memoHtml}
+          ${dateHtml}
         </div>
       </div>
       <div class="item-price-col">${priceHtml}</div>
@@ -642,7 +659,13 @@ document.addEventListener('click', async (e) => {
   if(!item) return;
 
   if(btn.dataset.action === 'check'){
-    try{ await updateDoc(doc(db, "items", id), { checked: !item.checked }); }
+    const newChecked = !item.checked;
+    try{
+      await updateDoc(doc(db, "items", id), {
+        checked: newChecked,
+        purchasedAt: newChecked ? serverTimestamp() : null
+      });
+    }
     catch(e){ console.error('체크 실패', e); }
   }else if(btn.dataset.action === 'del'){
     try{ await deleteDoc(doc(db, "items", id)); }
